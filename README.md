@@ -16,7 +16,7 @@ Automação em nuvem desenvolvida com **Google Apps Script** para atualizar diar
 ## 📁 Estrutura do Projeto
 
 ```text
-Agendamento-Leitura-Bíblica/
+Agendamento-Leitura-Biblica/
 ├── Cronograma Versiculos Devocional V2.csv  # Base de dados estruturada por dia
 ├── Cronograma-Versiculos-Devocional.js       # Script de automação (Google Apps Script)
 └── README.md                                # Documentação do projeto
