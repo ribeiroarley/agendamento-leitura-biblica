@@ -26,9 +26,8 @@ Diferente de soluções convencionais que exibem apenas referências bíblicas, 
 ```text
 Agendamento-Leitura-Biblica/
 ├── Cronograma_Versiculos_Com_Texto.csv  # Base completa com referências e TEXTO INTEGRAL (90 dias)
-├── Cronograma Versiculos Devocional V2 - Cronograma Versiculos Devocional V2.csv # Base legada apenas com referências
-├── Cronograma-Versiculos-Devocional.js    # Código-fonte da automação (Google Apps Script)
-└── README.md                             # Documentação técnica do projeto
+├── Cronograma-Versiculos-Devocional.js  # Código-fonte da automação (Google Apps Script)
+└── README.md                            # Documentação técnica do projeto
 ```
 
 ### 📋 Especificação do Dataset (`Cronograma_Versiculos_Com_Texto.csv`)
@@ -236,4 +235,4 @@ Ao abrir a tarefa no celular ou computador, as anotações são formatadas da se
 * **Ambiente de Execução:** [Google Apps Script](https://developers.google.com/apps-script) (JavaScript V8 Engine)
 * **APIs Integradas:** Google Sheets Spreadsheet Service & Google Tasks API v1 (`Tasks`)
 * **Persistência Serverless:** `PropertiesService` (Google Cloud Script Properties)
-* **Padrão de Dados:** CSV RFC 4180 (UTF-8)
+* **Padrão de Dados:** CSV RFC 4180 (UTF-8)
