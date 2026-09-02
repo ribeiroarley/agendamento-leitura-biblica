@@ -1,5 +1,3 @@
-
-```markdown
 # Agendamento e Atualização Automática de Devocional Diário
 
 Automação em nuvem desenvolvida com **Google Apps Script** para atualizar diariamente, de forma 100% autônoma, os versículos e temas de estudo bíblico em uma tarefa recorrente no **Google Tarefas (Google Tasks)**, utilizando dados parametrizados em uma planilha do **Google Sheets**.
@@ -22,7 +20,6 @@ Agendamento-Leitura-Bíblica/
 ├── Cronograma Versiculos Devocional V2.csv  # Base de dados estruturada por dia
 ├── Cronograma-Versiculos-Devocional.js       # Script de automação (Google Apps Script)
 └── README.md                                # Documentação do projeto
-
 ```
 
 ---
@@ -57,12 +54,10 @@ Crie a tarefa base no aplicativo **Google Tarefas** ou pelo Gmail/Calendar:
 1. Na planilha aberta, acesse o menu superior: **Extensões** > **Apps Script**.
 2. Cole o conteúdo de `Cronograma-Versiculos-Devocional.js` no arquivo `Código.gs`.
 3. **Adicionar o Serviço do Google Tasks:**
-* No menu lateral esquerdo, clique no ícone **`+`** ao lado de **Serviços**.
-* Localize **Tasks API** (ou Google Tasks API).
-* Defina o identificador como `Tasks` (ou ajuste no código para `GoogleTasks` caso use o identificador padrão).
-* Clique em **Adicionar**.
-
-
+   * No menu lateral esquerdo, clique no ícone **`+`** ao lado de **Serviços**.
+   * Localize **Tasks API** (ou Google Tasks API).
+   * Defina o identificador como `Tasks` (ou ajuste no código para `GoogleTasks` caso use o identificador padrão).
+   * Clique em **Adicionar**.
 4. Pressione `Ctrl + S` para salvar o projeto.
 
 ---
@@ -82,13 +77,11 @@ Crie a tarefa base no aplicativo **Google Tarefas** ou pelo Gmail/Calendar:
 1. No menu lateral esquerdo do Apps Script, clique no ícone de relógio (**Acionadores / Triggers**).
 2. Clique no botão **+ Adicionar acionador** (canto inferior direito).
 3. Configure os seguintes parâmetros:
-* **Função a ser executada:** `atualizarDevocionalDiario`
-* **Implantação:** `Teste` (ou `Head`)
-* **Origem do evento:** `Baseado no tempo`
-* **Tipo de acionador com base no tempo:** `Contador de dias`
-* **Hora do dia:** `7h às 8h`
-
-
+   * **Função a ser executada:** `atualizarDevocionalDiario`
+   * **Implantação:** `Teste` (ou `Head`)
+   * **Origem do evento:** `Baseado no tempo`
+   * **Tipo de acionador com base no tempo:** `Contador de dias`
+   * **Hora do dia:** `7h às 8h`
 4. Clique em **Salvar**.
 
 ---
@@ -98,7 +91,3 @@ Crie a tarefa base no aplicativo **Google Tarefas** ou pelo Gmail/Calendar:
 * **Google Apps Script** (JavaScript V8 Engine)
 * **Google Sheets API**
 * **Google Tasks API v1**
-
-```
-
-```
