@@ -2,84 +2,128 @@
 
 [![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-4285F4?style=flat&logo=google&logoColor=white)](https://developers.google.com/apps-script)
 [![Google Sheets](https://img.shields.io/badge/Google%20Sheets-34A853?style=flat&logo=google-sheets&logoColor=white)](https://www.google.com/sheets/about/)
-[![Google Tasks](https://img.shields.io/badge/Google%20Tasks-4285F4?style=flat&logo=google&logoColor=white)](https://tasks.google.com/)
+[![Google Tasks API](https://img.shields.io/badge/Google%20Tasks%20API-v1-4285F4?style=flat&logo=google&logoColor=white)](https://developers.google.com/tasks)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Automação em nuvem desenvolvida em **Google Apps Script** que atualiza diariamente, de forma 100% autônoma, uma tarefa recorrente no **Google Tarefas (Google Tasks)**. 
+Automação em nuvem de nível de produção desenvolvida em **Google Apps Script** (Engine V8) para atualizar e reativar diariamente, de forma 100% autônoma, uma tarefa recorrente no **Google Tarefas (Google Tasks)**.
 
-Diferente de soluções convencionais que exibem apenas referências bíblicas, esta automação injeta o **TEXTO BÍBLICO INTEGRAL formatado** diretamente nas anotações da tarefa, permitindo realizar a leitura e a oração matinal sem precisar alternar entre aplicativos ou abrir a Bíblia física/digital separadamente.
+Diferente de abordagens tradicionais que exibem apenas citações ou links externos, este pipeline injeta o **TEXTO BÍBLICO INTEGRAL formatado** diretamente nas anotações da tarefa. Isso viabiliza uma rotina devocional e de oração focada, sem necessidade de alternar entre aplicativos ou abrir Bíblias físicas/digitais.
+
+---
+
+## ⚡ Destaques de Engenharia e Resiliência (Produção)
+
+Para garantir 100% de confiabilidade no disparo diário e evitar falhas comuns do Google Tasks em tarefas recorrentes, a automação conta com as seguintes melhorias críticas:
+
+1. **Visibilidade Abrangente da Tasks API (`showCompleted: true` e `showHidden: true`):**
+   - O Google Tasks frequentemente oculta ou marca instâncias recorrentes concluídas no dia anterior antes da geração da nova ocorrência.
+   - A listagem com esses parâmetros garante que instâncias geradas pela recorrência ou tarefas arquivadas/concluídas não sejam perdidas ou ignoradas durante a varredura.
+2. **Reativação Automática de Instância (`status: "needsAction"` e `completed: null`):**
+   - No momento do `patch`, o payload força o status da tarefa de volta para ativa (`needsAction`) e anula a data de conclusão (`completed: null`).
+   - Isso garante que a tarefa retorne ao topo da lista com notificações visíveis e alarme funcional no dispositivo móvel às **08:30**.
+3. **Varredura Multilista com Paginação (`nextPageToken`):**
+   - O script não assume uma lista padrão: ele itera por todas as listas de tarefas da conta Google.
+   - Suporta paginação completa através de `nextPageToken` e `maxResults: 100`, localizando a tarefa alvo independentemente da quantidade de itens existentes.
+4. **Persistência de Estado Serverless (`PropertiesService`):**
+   - Controle sequencial do dia corrente mantido via `ScriptProperties` (`DIA_DEVOCIONAL_ATUAL`), com suporte a reinício cíclico (1 a 90 dias) e funções utilitárias de calibração manual.
 
 ---
 
 ## 📌 Principais Recursos
 
-- **📖 Texto Integral na Tarefa:** Injeta a leitura bíblica completa (traduções NVI / Almeida Revista e Atualizada) com espaçamento limpo e ícones devocionais.
-- **⏰ Execução em Piloto Automático:** Disparo programado via acionador baseado em tempo (trigger) executado diariamente entre as 07:00 e 08:00 (antecedendo o alarme da tarefa às 08:30).
-- **💾 Persistência de Estado:** Controle sequencial do dia corrente utilizando `PropertiesService` (ciclo completo de 1 a 90 dias).
-- **🔄 Ciclo Contínuo:** Quando atinge o final do cronograma (Dia 90), reinicia automaticamente no Dia 1.
-- **⚡ Zero Dependências Externas:** Integração nativa e segura entre Google Sheets e Google Tasks API.
+- **📖 Texto Integral nas Anotações:** Injeta a leitura bíblica completa (NVI / ARA) estruturada por versículo com o marcador visual `💬`.
+- **⏰ Execução em Piloto Automático:** Trigger diário baseado em tempo executado entre **06:00 e 07:00** (antecedendo o alarme da tarefa às 08:30).
+- **🔄 Ciclo Contínuo de 90 Dias:** Ao concluir o Dia 90, o ciclo reinicia de forma transparente no Dia 1.
+- **🛠️ Sincronização e Ajuste Fino Manual:** Funções de alinhamento para casos de testes, feriados ou sincronização com dias específicos da semana.
+- **🛡️ Zero Dependências Externas:** Utiliza apenas APIs nativas do ecossistema Google Workspace.
 
 ---
 
-## 📁 Arquitetura e Estrutura de Arquivos
+## 📁 Estrutura do Repositório
 
 ```text
 Agendamento-Leitura-Biblica/
-├── Cronograma_Versiculos_Com_Texto.csv  # Base completa com referências e TEXTO INTEGRAL (90 dias)
-├── Cronograma-Versiculos-Devocional.js  # Código-fonte da automação (Google Apps Script)
-└── README.md                            # Documentação técnica do projeto
+├── Cronograma_Versiculos_Com_Texto.csv  # Base canônica com referências e TEXTO INTEGRAL (90 dias)
+├── Cronograma-Versiculos-Devocional.js    # Código-fonte da automação (Google Apps Script)
+└── README.md                             # Documentação técnica e guia operacional
 ```
 
 ### 📋 Especificação do Dataset (`Cronograma_Versiculos_Com_Texto.csv`)
 
-O arquivo CSV segue a norma **RFC 4180** e contém **5 colunas obrigatórias**:
+O arquivo CSV segue a norma **RFC 4180** (codificação UTF-8) e é estruturado em 5 colunas:
 
 | Coluna | Tipo | Descrição | Exemplo |
 | :--- | :--- | :--- | :--- |
 | **`Dia_Numero`** | Inteiro | Número ordinal do dia (1 a 90) | `1` |
 | **`Dia_Semana`** | Texto | Dia da semana correspondente | `Segunda` |
-| **`Tema`** | Texto | Eixo temático devocional do dia | `Recomeço` |
-| **`Versiculos`** | Texto | Referências resumidas (2 a 3 versículos-chave) | `2Co 5:17, Ez 36:26, Sl 51:10` |
-| **`Texto_Completo`** | Texto | Textos integrais separados pelo delimitador ` \| ` | `2Co 5:17 - Portanto, se alguém... \| Ez 36:26 - Darei a vocês...` |
+| **`Tema`** | Texto | Eixo temático do dia | `Recomeço` |
+| **`Versiculos`** | Texto | Referências resumidas dos versículos | `2Co 5:17, Ez 36:26, Sl 51:10` |
+| **`Texto_Completo`** | Texto | Textos integrais delimitados por ` \| ` | `2Co 5:17 - Portanto, se alguém... \| Ez 36:26 - Darei a vocês...` |
 
 ---
 
-## 🚀 Passo a Passo de Configuração
+## ⚙️ Mecânica de Formatação do Texto Bíblico
 
-### Passo 1: Criar a Tarefa Base no Google Tasks
+A coluna `Texto_Completo` (índice 4 / Coluna E) armazena os versículos encadeados pelo delimitador `" | "`. 
 
-No aplicativo **Google Tarefas** (ou pelo painel lateral do Gmail / Google Agenda), crie a tarefa recorrente:
+O algoritmo processa a string convertendo cada passagem em um bloco devocional destacado:
 
-- **Título:** `Leitura Bíblica Diária e Oração (10 min)` *(deve ser idêntico ao configurado no script)*
+```javascript
+// Tratamento da coluna de texto completo (Coluna E / índice 4)
+let textoBiblicoFormatado = "";
+if (linhaEncontrada[4]) {
+  const versiculosArray = linhaEncontrada[4].toString().split(" | ");
+  textoBiblicoFormatado = "\n\n" + versiculosArray.map(v => `💬 ${v.trim()}`).join("\n\n");
+}
+```
+
+---
+
+## 🔄 Gestão do Contador Sequencial (`PropertiesService`)
+
+A evolução do plano de leitura não depende de datas estáticas em planilha, mas sim do estado persistido no `PropertiesService` do Apps Script sob a chave `DIA_DEVOCIONAL_ATUAL`:
+
+```mermaid
+flowchart LR
+    A[Trigger Matinal 06h-07h] --> B[Lê DIA_DEVOCIONAL_ATUAL]
+    B --> C[Busca Linha no Sheets]
+    C --> D[Patch no Google Tasks com Reativação]
+    D --> E[Incrementa DIA_DEVOCIONAL_ATUAL + 1]
+    E --> F[Fim da Execução]
+```
+
+### Funções Utilitárias de Sincronização
+
+| Função | Parâmetros | Finalidade Operacional |
+| :--- | :--- | :--- |
+| **`definirDiaManual(numero)`** | `numero` *(opcional, ex: `4`)* | Alinha imediatamente o contador com o dia do calendário desejado (ex: sincronizar com a Quinta-feira). Se chamado sem argumentos, define por padrão o **Dia 4**. |
+| **`definirDiaInicial()`** | *Nenhum* | Reseta o contador para o **Dia 1** (início do ciclo de 90 dias). |
+
+> [!TIP]
+> Caso queira testar a automação sem esperar o dia seguinte ou pular leituras após um período de pausa, execute `definirDiaManual(X)` diretamente no editor do Apps Script.
+
+---
+
+## 🚀 Passo a Passo de Implantação
+
+### 1. Criar a Tarefa Base no Google Tasks
+No aplicativo **Google Tarefas** (web ou mobile):
+- **Título:** `Leitura Bíblica Diária e Oração (10 min)` *(o script faz busca `includes` case-insensitive)*
 - **Horário:** `08:30`
-- **Repetição/Recorrência:** Diária
+- **Recorrência:** Diária
 
----
+### 2. Importar Dados no Google Sheets
+1. Crie uma planilha no [Google Sheets](https://sheets.google.com).
+2. Acesse **Arquivo** > **Importar** > **Fazer upload** e envie o arquivo [`Cronograma_Versiculos_Com_Texto.csv`](file:///C:/Users/arsx_/Documents/Agendamento-Leitura-Biblica/Cronograma_Versiculos_Com_Texto.csv).
+3. Selecione a opção **Substituir planilha atual**.
 
-### Passo 2: Criar e Importar os Dados no Google Sheets
+### 3. Habilitar a Google Tasks API no Apps Script
+1. Na planilha, acesse **Extensões** > **Apps Script**.
+2. No menu lateral esquerdo, clique no botão **`+`** em **Serviços**.
+3. Selecione **Google Tasks API**, mantenha o Identificador como `Tasks` e clique em **Adicionar**.
 
-1. Acesse o [Google Sheets](https://sheets.google.com) e crie uma **Planilha em Branco**.
-2. Vá em **Arquivo** > **Importar** > **Fazer upload**.
-3. Selecione o arquivo [`Cronograma_Versiculos_Com_Texto.csv`](file:///C:/Users/arsx_/Documents/Agendamento-Leitura-Biblica/Cronograma_Versiculos_Com_Texto.csv).
-4. Em *Tipo de importação*, selecione **Substituir planilha atual** e confirme.
-5. Certifique-se de que a primeira linha contenha exatamente as 5 colunas (`Dia_Numero`, `Dia_Semana`, `Tema`, `Versiculos`, `Texto_Completo`).
-
----
-
-### Passo 3: Criar o Projeto Apps Script e Ativar o Serviço Google Tasks
-
-1. Na planilha aberta, acesse o menu superior: **Extensões** > **Apps Script**.
-2. No menu lateral esquerdo do Apps Script, clique no botão **`+`** ao lado de **Serviços**.
-3. Na lista de serviços do Google:
-   - Selecione **Google Tasks API** (ou **Tasks API**).
-   - Defina o campo **Identificador** exatamente como: `Tasks`.
-   - Clique em **Adicionar**.
-
----
-
-### Passo 4: Implementar o Código de Automação
-
-Cole o conteúdo de [`Cronograma-Versiculos-Devocional.js`](file:///C:/Users/arsx_/Documents/Agendamento-Leitura-Biblica/Cronograma-Versiculos-Devocional.js) no arquivo `Código.gs`:
+### 4. Publicar o Código
+Copie o código de [`Cronograma-Versiculos-Devocional.js`](file:///C:/Users/arsx_/Documents/Agendamento-Leitura-Biblica/Cronograma-Versiculos-Devocional.js) para o editor do Apps Script e salve (`Ctrl + S`):
 
 ```javascript
 function atualizarDevocionalDiario() {
@@ -145,28 +189,57 @@ function atualizarDevocionalDiario() {
   }
 
   let tarefaAtualizada = false;
+  const termoBusca = nomeTarefa.toLowerCase().trim();
 
   for (let list of taskLists) {
-    const tasks = taskService.Tasks.list(list.id, { showHidden: false, maxResults: 100 }).items;
+    let pageToken = null;
 
-    if (tasks) {
-      for (let task of tasks) {
-        if (task.title && task.title.includes(nomeTarefa)) {
-          task.notes = novaDescricao;
-          taskService.Tasks.patch(task, list.id, task.id);
-          Logger.log(`Tarefa atualizada para o Dia ${diaNumero} (${diaSemana} - ${tema}) na lista "${list.title}"`);
-          tarefaAtualizada = true;
-          break;
+    do {
+      // Busca tanto pendentes quanto concluídas (evita perder instâncias recorrentes)
+      const response = taskService.Tasks.list(list.id, {
+        showCompleted: true,
+        showHidden: true,
+        maxResults: 100,
+        pageToken: pageToken
+      });
+
+      if (response.items && response.items.length > 0) {
+        for (let task of response.items) {
+          if (task.title && task.title.toLowerCase().includes(termoBusca)) {
+            task.notes = novaDescricao;
+            
+            // Reativa a tarefa caso tenha ficado marcada como concluída
+            task.status = "needsAction";
+            task.completed = null;
+
+            taskService.Tasks.patch(task, list.id, task.id);
+            Logger.log(`[SUCESSO] Tarefa atualizada e reativada para o Dia ${diaNumero} (${diaSemana} - ${tema}) na lista "${list.title}"!`);
+            tarefaAtualizada = true;
+            break;
+          }
         }
       }
-    }
+
+      if (tarefaAtualizada) break;
+      pageToken = response.nextPageToken;
+    } while (pageToken);
+
     if (tarefaAtualizada) break;
   }
 
-  // 7. Incrementa o dia para a próxima execução matinal
-  if (tarefaAtualizada) {
-    props.setProperty("DIA_DEVOCIONAL_ATUAL", (diaAtual + 1).toString());
+  if (!tarefaAtualizada) {
+    Logger.log(`[AVISO] Nenhuma tarefa com o título contendo "${nomeTarefa}" foi encontrada.`);
+    return;
   }
+
+  // 7. Incrementa o dia para a próxima execução matinal
+  props.setProperty("DIA_DEVOCIONAL_ATUAL", (diaAtual + 1).toString());
+}
+
+function definirDiaManual(numero) {
+  const diaAlvo = numero ? numero.toString() : "4";
+  PropertiesService.getScriptProperties().setProperty("DIA_DEVOCIONAL_ATUAL", diaAlvo);
+  Logger.log(`[SINCRONIZAÇÃO] Contador ajustado com sucesso para o Dia ${diaAlvo}!`);
 }
 
 function definirDiaInicial() {
@@ -175,52 +248,27 @@ function definirDiaInicial() {
 }
 ```
 
-Pressione `Ctrl + S` para salvar o script.
+### 5. Configurar o Acionador Diário (Trigger)
+1. No menu lateral do Apps Script, clique no ícone de relógio (**Acionadores**).
+2. Clique em **+ Adicionar acionador** com as configurações:
+   - **Função:** `atualizarDevocionalDiario`
+   - **Origem do evento:** `Baseado no tempo`
+   - **Tipo de acionador:** `Contador de dias`
+   - **Hora do dia:** `06:00 às 07:00` (ou `07:00 às 08:00`)
+3. Conceda as permissões OAuth solicitadas.
 
 ---
 
-### Passo 5: Configurar o Acionador Diário (Trigger)
-
-1. No menu lateral esquerdo do Apps Script, clique no ícone de relógio (**Acionadores / Triggers**).
-2. Clique no botão **+ Adicionar acionador** (canto inferior direito).
-3. Ajuste os campos conforme indicado:
-
-| Campo | Configuração |
-| :--- | :--- |
-| **Função a ser executada** | `atualizarDevocionalDiario` |
-| **Implantação** | `Head` (ou `Teste`) |
-| **Origem do evento** | `Baseado no tempo` |
-| **Tipo de acionador** | `Contador de dias` |
-| **Hora do dia** | `07:00 às 08:00` |
-
-4. Clique em **Salvar** e conceda as permissões de acesso solicitadas pela sua conta Google.
-
----
-
-### Passo 6: Gerenciamento Manual do Contador (`definirDiaInicial`)
-
-Caso precise sincronizar o cronograma com um dia específico (por exemplo, iniciar a partir do Dia 15 ou reiniciar o plano):
-
-1. No editor do Apps Script, selecione a função `definirDiaInicial` no seletor do topo.
-2. Para voltar ao Dia 1, clique em **Executar**.
-3. *(Opcional)* Para avançar diretamente para outro dia (ex: Dia 45), altere o valor ou chame `definirDiaInicial(45)`.
-4. O `PropertiesService` persistirá o valor sob a chave `DIA_DEVOCIONAL_ATUAL`, garantindo que o trigger execute o dia programado na manhã seguinte.
-
----
-
-## 📱 Exemplo Visual da Tarefa no Google Tasks
-
-Ao abrir a tarefa no celular ou computador, as anotações são formatadas da seguinte forma:
+## 📱 Exemplo Visual nas Anotações do Google Tasks
 
 ```text
 • Tirar 10 minutos de reflexão, leitura e oração.
 • Foco em: renovação de vida, disciplina, superação de hábitos antigos, honra à família e organização.
 
 📖 Devocional de Hoje (Dia 1 - Segunda):
-🎯 Tema: Recomeço
-📌 Referências: 2Co 5:17, Ez 36:26, Sl 51:10
+Tema: Recomeço
+Referências: 2Co 5:17, Ez 36:26, Sl 51:10
 
-📜 Leitura Integral:
 💬 2Co 5:17 - Portanto, se alguém está em Cristo, é nova criação. As coisas antigas já passaram; eis que surgiram coisas novas!
 
 💬 Ez 36:26 - Darei a vocês um coração novo e porei um espírito novo em vocês; tirarei de vocês o coração de pedra e lhes darei um coração de carne.
@@ -230,9 +278,24 @@ Ao abrir a tarefa no celular ou computador, as anotações são formatadas da se
 
 ---
 
+## 🔍 Guia Rápido de Solução de Problemas (Troubleshooting)
+
+### ❓ "A tarefa não disparou / não atualizou o conteúdo hoje"
+
+1. **Verifique o horário do Acionador:**
+   - O acionador matinal deve rodar na janela entre **06:00 e 07:00** (ou até 08:00), garantindo que a tarefa seja atualizada e reativada antes do alarme das **08:30**.
+2. **Status de Conclusão da Tarefa Anterior:**
+   - Graças aos parâmetros `showCompleted: true`, `showHidden: true`, `status: "needsAction"` e `completed: null`, o script reativa tarefas concluídas. No entanto, se o título da tarefa no Google Tasks foi alterado manualmente, o script não a localizará. Verifique se o título contém exatamente `Leitura Bíblica Diária e Oração (10 min)`.
+3. **Ajuste Manual do Dia:**
+   - Se o script falhou por falta de permissão ou se você deseja forçar o dia correto imediatamente, abra o editor do Apps Script, selecione `definirDiaManual`, defina o parâmetro desejado (ex: `definirDiaManual(5)`) e execute a função. Em seguida, execute `atualizarDevocionalDiario` para aplicar o conteúdo na hora.
+4. **Logs de Execução:**
+   - Acesse **Execuções** no painel do Apps Script para auditar o log detalhado de cada execução (`[SUCESSO]`, `[AVISO]` ou mensagens de erro da API).
+
+---
+
 ## 🛠️ Tecnologias e Padrões
 
-* **Ambiente de Execução:** [Google Apps Script](https://developers.google.com/apps-script) (JavaScript V8 Engine)
-* **APIs Integradas:** Google Sheets Spreadsheet Service & Google Tasks API v1 (`Tasks`)
-* **Persistência Serverless:** `PropertiesService` (Google Cloud Script Properties)
-* **Padrão de Dados:** CSV RFC 4180 (UTF-8)
+* **Runtime:** [Google Apps Script](https://developers.google.com/apps-script) (V8 JavaScript Engine)
+* **API de Produtividade:** [Google Tasks API v1](https://developers.google.com/tasks)
+* **Persistência de Estado:** Google Apps Script `PropertiesService`
+* **Formato de Dados:** CSV RFC 4180 (UTF-8)

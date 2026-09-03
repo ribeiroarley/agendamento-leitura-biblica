@@ -1,3 +1,15 @@
+/**
+ * ============================================================================
+ * PROJETO: Leitura Bíblica Diária e Devocional (Google Tasks)
+ * FINALIDADE: Atualização diária automatizada das leituras e textos bíblicos.
+ * MELHORIAS:
+ *  - showCompleted: true e showHidden: true (não perde tarefas recorrentes)
+ *  - Reativação automática da tarefa (status = "needsAction") para garantir o alarme
+ *  - Varredura multilista com paginação
+ *  - Função para ajustar manualmente o dia para sincronizar com o calendário
+ * ============================================================================
+ */
+
 function atualizarDevocionalDiario() {
   const nomeTarefa = "Leitura Bíblica Diária e Oração (10 min)";
   
@@ -61,30 +73,66 @@ function atualizarDevocionalDiario() {
   }
 
   let tarefaAtualizada = false;
+  const termoBusca = nomeTarefa.toLowerCase().trim();
 
   for (let list of taskLists) {
-    const tasks = taskService.Tasks.list(list.id, { showHidden: false, maxResults: 100 }).items;
+    let pageToken = null;
 
-    if (tasks) {
-      for (let task of tasks) {
-        if (task.title && task.title.includes(nomeTarefa)) {
-          task.notes = novaDescricao;
-          taskService.Tasks.patch(task, list.id, task.id);
-          Logger.log(`Tarefa atualizada para o Dia ${diaNumero} (${diaSemana} - ${tema}) na lista "${list.title}"`);
-          tarefaAtualizada = true;
-          break;
+    do {
+      // Busca tanto pendentes quanto concluídas (evita perder instâncias recorrentes)
+      const response = taskService.Tasks.list(list.id, {
+        showCompleted: true,
+        showHidden: true,
+        maxResults: 100,
+        pageToken: pageToken
+      });
+
+      if (response.items && response.items.length > 0) {
+        for (let task of response.items) {
+          if (task.title && task.title.toLowerCase().includes(termoBusca)) {
+            task.notes = novaDescricao;
+            
+            // Reativa a tarefa caso tenha ficado marcada como concluída
+            task.status = "needsAction";
+            task.completed = null;
+
+            taskService.Tasks.patch(task, list.id, task.id);
+            Logger.log(`[SUCESSO] Tarefa atualizada e reativada para o Dia ${diaNumero} (${diaSemana} - ${tema}) na lista "${list.title}"!`);
+            tarefaAtualizada = true;
+            break;
+          }
         }
       }
-    }
+
+      if (tarefaAtualizada) break;
+      pageToken = response.nextPageToken;
+    } while (pageToken);
+
     if (tarefaAtualizada) break;
   }
 
-  // 7. Incrementa o dia para a próxima execução matinal
-  if (tarefaAtualizada) {
-    props.setProperty("DIA_DEVOCIONAL_ATUAL", (diaAtual + 1).toString());
+  if (!tarefaAtualizada) {
+    Logger.log(`[AVISO] Nenhuma tarefa com o título contendo "${nomeTarefa}" foi encontrada.`);
+    return;
   }
+
+  // 7. Incrementa o dia para a próxima execução matinal
+  props.setProperty("DIA_DEVOCIONAL_ATUAL", (diaAtual + 1).toString());
 }
 
+/**
+ * Ajusta manualmente o dia atual para sincronizar com o dia desejado da semana.
+ * Por padrão, define para o Dia 4 (Quinta-feira).
+ */
+function definirDiaManual(numero) {
+  const diaAlvo = numero ? numero.toString() : "4";
+  PropertiesService.getScriptProperties().setProperty("DIA_DEVOCIONAL_ATUAL", diaAlvo);
+  Logger.log(`[SINCRONIZAÇÃO] Contador ajustado com sucesso para o Dia ${diaAlvo}!`);
+}
+
+/**
+ * Função utilitária para resetar o contador para o Dia 1
+ */
 function definirDiaInicial() {
   PropertiesService.getScriptProperties().setProperty("DIA_DEVOCIONAL_ATUAL", "1");
   Logger.log("Contador reiniciado para o Dia 1.");
