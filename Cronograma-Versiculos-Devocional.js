@@ -248,12 +248,10 @@ function formatarNotaDevocional(info) {
   }
 
   return [
-    `───────────────────────────────`,
     `${info.emoji} DEVOCIONAL DO DIA (Dia ${info.diaNumero} - ${info.diaSemana})`,
     `📌 TEMA: ${info.tema}`,
     `📖 REFERÊNCIAS: ${info.versiculosRef}` + textoBiblicoFormatado,
     ``,
-    `───────────────────────────────`,
     `✨ "Toda a Escritura é divinamente inspirada e proveitosa para ensinar, redarguir e instruir na justiça." (2Tm 3:16)`
   ].join('\n');
 }

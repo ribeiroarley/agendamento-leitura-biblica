@@ -142,7 +142,6 @@ Você pode optar por:
 ## 📱 Exemplo Visual nas Anotações do Google Tasks
 
 ```text
-───────────────────────────────
 📖 DEVOCIONAL DO DIA (Dia 1 - Segunda)
 📌 TEMA: Recomeço
 📖 REFERÊNCIAS: 2Co 5:17, Ez 36:26, Sl 51:10
@@ -153,7 +152,6 @@ Você pode optar por:
 
 💬 Sl 51:10 - Cria em mim um coração puro, ó Deus, e renova dentro de mim um espírito estável.
 
-───────────────────────────────
 ✨ "Toda a Escritura é divinamente inspirada e proveitosa para ensinar, redarguir e instruir na justiça." (2Tm 3:16)
 ```
 
