@@ -248,9 +248,6 @@ function formatarNotaDevocional(info) {
   }
 
   return [
-    `• Tirar 10 minutos de reflexão, leitura e oração.`,
-    `• Foco em: renovação de vida, disciplina, superação de hábitos antigos, honra à família e organização.`,
-    ``,
     `───────────────────────────────`,
     `${info.emoji} DEVOCIONAL DO DIA (Dia ${info.diaNumero} - ${info.diaSemana})`,
     `📌 TEMA: ${info.tema}`,

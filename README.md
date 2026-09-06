@@ -142,18 +142,19 @@ Você pode optar por:
 ## 📱 Exemplo Visual nas Anotações do Google Tasks
 
 ```text
-• Tirar 10 minutos de reflexão, leitura e oração.
-• Foco em: renovação de vida, disciplina, superação de hábitos antigos, honra à família e organização.
-
-📖 Devocional de Hoje (Dia 1 - Segunda):
-Tema: Recomeço
-Referências: 2Co 5:17, Ez 36:26, Sl 51:10
+───────────────────────────────
+📖 DEVOCIONAL DO DIA (Dia 1 - Segunda)
+📌 TEMA: Recomeço
+📖 REFERÊNCIAS: 2Co 5:17, Ez 36:26, Sl 51:10
 
 💬 2Co 5:17 - Portanto, se alguém está em Cristo, é nova criação. As coisas antigas já passaram; eis que surgiram coisas novas!
 
 💬 Ez 36:26 - Darei a vocês um coração novo e porei um espírito novo em vocês; tirarei de vocês o coração de pedra e lhes darei um coração de carne.
 
 💬 Sl 51:10 - Cria em mim um coração puro, ó Deus, e renova dentro de mim um espírito estável.
+
+───────────────────────────────
+✨ "Toda a Escritura é divinamente inspirada e proveitosa para ensinar, redarguir e instruir na justiça." (2Tm 3:16)
 ```
 
 ---
