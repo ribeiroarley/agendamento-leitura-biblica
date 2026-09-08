@@ -2,14 +2,7 @@
  * ============================================================================
  * PROJETO: Leitura Bíblica Diária e Devocional Sequencial (Google Tasks)
  * ARQUIVO: Cronograma-Versiculos-Devocional.js
- * FINALIDADE: Atualização sequencial automatizada de leituras e versículos
- *             com base em cronograma estruturado no Google Sheets.
- * RECURSOS DE ROBUSTEZ:
- *  - Varredura Multilista com paginação e busca resiliente (showCompleted/showHidden)
- *  - Normalização Unicode NFD (imunidade a acentos e formatações móveis)
- *  - Reativação automática de instâncias (needsAction)
- *  - Auto-criação de tarefa com disparo imediato em +2 min para testes
- *  - Isolamento de estado: testes manuais não consomem dias da fila sequencial
+ * VERSÃO: 2.0 (Resiliência Total com Auto-Alinhamento de Vencimento 'due')
  * ============================================================================
  */
 
@@ -18,9 +11,11 @@
  */
 const CONFIG_DEVOCIONAL = {
   TASK_TITLE_KEYWORD: "Leitura Bíblica Diária e Oração (10 min)", // Palavra-chave no título
-  TASK_LIST_NAME: null,                                         // Deixe null para varrer TODAS as listas ou defina o nome
-  SHEET_NAME: null,                                             // Deixe null para usar a aba ativa ou especifique ex: "Devocional_90_Dias"
-  PROP_KEY_DIA_ATUAL: "DIA_DEVOCIONAL_ATUAL"                    // Chave de persistência de estado
+  TASK_LIST_NAME: null,                                         // Deixe null para varrer TODAS as listas
+  SHEET_NAME: null,                                             // Deixe null para usar a aba ativa
+  PROP_KEY_DIA_ATUAL: "DIA_DEVOCIONAL_ATUAL",                   // Chave de persistência de estado
+  HORA_VENCIMENTO_PADRAO: 8,                                    // 08:30 da manhã
+  MINUTO_VENCIMENTO_PADRAO: 30
 };
 
 /**
@@ -56,14 +51,14 @@ function getTasksService() {
  * ============================================================================
  * FUNÇÃO DE PRODUÇÃO (TRIGGER MATINAL DIÁRIO)
  * ============================================================================
- * Executa automaticamente todas as madrugadas (ex: 04:00 às 05:00).
+ * Executa automaticamente todas as madrugadas (04:00 às 06:00).
  * Lê o dia sequencial atual, atualiza a tarefa no Google Tasks e avança o contador.
  */
 function atualizarDevocionalDiario() {
   try {
     Logger.log("[PRODUÇÃO] Iniciando execução diária do Devocional...");
     const atualizadoComSucesso = processarAtualizacaoDevocional({
-      autoCriar: false,
+      autoCriar: true,
       avancarContador: true
     });
 
@@ -80,17 +75,15 @@ function atualizarDevocionalDiario() {
  * ============================================================================
  * MODO DE TESTE IMEDIATO (COM AUTO-CRIAÇÃO E ALERTA EM +2 MIN)
  * ============================================================================
- * - Se a tarefa não existir, cria automaticamente na lista padrão (@default)
- *   com horário de vencimento em +2 minutos para testar a notificação push.
- * - Atualiza as notas com o dia devocional corrente.
- * - NÃO altera o contador sequencial (permite testar à vontade sem avançar o cronograma).
+ * Testa notificação push sem alterar o ponteiro do cronograma.
  */
 function executarTesteImediatoAgora() {
   try {
     Logger.log("[TESTE IMEDIATO] Executando teste do devocional com auto-criação ativa (sem avançar contador)...");
     processarAtualizacaoDevocional({
       autoCriar: true,
-      avancarContador: false
+      avancarContador: false,
+      testeImediato2Min: true
     });
   } catch (error) {
     Logger.log(`[ERRO NO TESTE IMEDIATO] ${error.message}`);
@@ -99,14 +92,9 @@ function executarTesteImediatoAgora() {
 }
 
 /**
- * ============================================================================
- * TESTE ESPECÍFICO DE UM DIA DO CRONOGRAMA
- * ============================================================================
- * Injeta na tarefa os dados de um dia específico (ex: Dia 4) para conferência,
- * sem alterar o ponteiro do cronograma.
- * Exemplo de uso: testarDiaEspecifico(4)
- * 
- * @param {number|string} numeroDia - Número do dia da planilha a ser testado
+ * Injeta na tarefa os dados de um dia específico para conferência sem alterar o cronograma.
+ * Exemplo: testarDiaEspecifico(4)
+ * @param {number|string} numeroDia - Número do dia da planilha
  */
 function testarDiaEspecifico(numeroDia) {
   const diaAlvo = parseInt(numeroDia || 1, 10);
@@ -122,7 +110,7 @@ function testarDiaEspecifico(numeroDia) {
 /**
  * Orquestrador principal da leitura do Sheets, montagem do payload e injeção na Tasks API.
  * 
- * @param {Object} opcoes - { autoCriar: boolean, avancarContador: boolean, diaForcado: number|null }
+ * @param {Object} opcoes - { autoCriar: boolean, avancarContador: boolean, diaForcado: number|null, testeImediato2Min: boolean }
  * @returns {boolean} true se atualizado/criado com sucesso
  */
 function processarAtualizacaoDevocional(opcoes) {
@@ -160,7 +148,7 @@ function processarAtualizacaoDevocional(opcoes) {
     }
   }
 
-  // Fallback: se o contador ultrapassou a última linha, faz o loop e reinicia no Dia 1
+  // Fallback: se o contador ultrapassou a última linha, faz o loop e reinicia no primeiro dia
   if (!linhaEncontrada) {
     Logger.log(`[AVISO] Dia ${diaAtual} não localizado. Reiniciando ciclo na primeira linha de dados.`);
     diaAtual = parseInt(dados[1][0], 10) || 1;
@@ -187,7 +175,16 @@ function processarAtualizacaoDevocional(opcoes) {
     emoji
   });
 
-  // 4. Localizar a tarefa em todas as listas
+  // 4. Calcular data de vencimento (due) exata para evitar tarefas atrasadas ou adiantadas
+  let dataVencimento;
+  if (opcoes.testeImediato2Min) {
+    dataVencimento = new Date(Date.now() + 2 * 60 * 1000); // +2 minutos
+  } else {
+    dataVencimento = new Date();
+    dataVencimento.setHours(CONFIG_DEVOCIONAL.HORA_VENCIMENTO_PADRAO, CONFIG_DEVOCIONAL.MINUTO_VENCIMENTO_PADRAO, 0, 0);
+  }
+
+  // 5. Localizar a tarefa em todas as listas
   const tasksService = getTasksService();
   const resultadoBusca = localizarTarefaEmTodasAsListas(
     tasksService, 
@@ -198,38 +195,40 @@ function processarAtualizacaoDevocional(opcoes) {
   let sucesso = false;
 
   if (resultadoBusca) {
-    // Tarefa localizada: atualiza notas e reativa
+    // Tarefa localizada: atualiza notas, data de vencimento para HOJE e reativa status
     const { taskListId, taskListName, task } = resultadoBusca;
     task.notes = notasFormatadas;
     task.status = "needsAction";
     task.completed = null;
+    task.due = dataVencimento.toISOString(); // Alinha a data de vencimento para HOJE
 
     tasksService.Tasks.patch(task, taskListId, task.id);
-    Logger.log(`[SUCESSO] Tarefa "${task.title}" (ID: ${task.id}) na lista "${taskListName}" atualizada e reativada para o Dia ${diaNumero} (${diaSemana})!`);
+    Logger.log(`[SUCESSO] Tarefa "${task.title}" (ID: ${task.id}) na lista "${taskListName}" atualizada para o Dia ${diaNumero} (${diaSemana}) com vencimento alinhado para ${dataVencimento.toLocaleTimeString('pt-BR')}!`);
     sucesso = true;
   } else {
     // Tarefa não encontrada
     if (opcoes.autoCriar) {
-      const dataVencimento = new Date(Date.now() + 2 * 60 * 1000); // Daqui a 2 minutos
       const novaTarefa = {
         title: CONFIG_DEVOCIONAL.TASK_TITLE_KEYWORD,
         notes: notasFormatadas,
-        due: dataVencimento.toISOString()
+        due: dataVencimento.toISOString(),
+        status: "needsAction"
       };
 
-      const tarefaCriada = tasksService.Tasks.insert(novaTarefa, "@default");
-      Logger.log(`[AUTO-CRIAÇÃO REALIZADA] Nenhuma tarefa prévia foi encontrada. A tarefa "${tarefaCriada.title}" foi criada na lista padrão com vencimento para ${dataVencimento.toLocaleTimeString('pt-BR')} (ID: ${tarefaCriada.id}).`);
+      const listaDestino = CONFIG_DEVOCIONAL.TASK_LIST_NAME || "@default";
+      const tarefaCriada = tasksService.Tasks.insert(novaTarefa, listaDestino);
+      Logger.log(`[AUTO-CRIAÇÃO REALIZADA] Nenhuma tarefa prévia foi encontrada. A tarefa "${tarefaCriada.title}" foi criada na lista "${listaDestino}" com vencimento para ${dataVencimento.toLocaleTimeString('pt-BR')} (ID: ${tarefaCriada.id}).`);
       sucesso = true;
     } else {
       Logger.log(`[AVISO] Nenhuma tarefa encontrada contendo "${CONFIG_DEVOCIONAL.TASK_TITLE_KEYWORD}" em nenhuma lista.`);
-      Logger.log(`Dica: Crie a tarefa com o título correto ou execute 'executarTesteImediatoAgora()' para auto-criação.`);
       return false;
     }
   }
 
-  // 5. Avançar contador apenas se for execução oficial de produção
+  // 6. Avançar contador apenas se for execução oficial de produção
   if (sucesso && opcoes.avancarContador) {
-    const proximoDia = diaAtual + 1;
+    const totalRegistros = dados.length - 1;
+    const proximoDia = (diaAtual >= totalRegistros) ? 1 : diaAtual + 1;
     props.setProperty(CONFIG_DEVOCIONAL.PROP_KEY_DIA_ATUAL, proximoDia.toString());
     Logger.log(`[ESTADO ATUALIZADO] Contador sequencial avançado para o Dia ${proximoDia}.`);
   }
@@ -263,17 +262,19 @@ function localizarTarefaEmTodasAsListas(tasksService, keyword, specificListName)
   const keywordNormalizada = normalizarTexto(keyword);
 
   let listas = [];
-  try {
-    const responseListas = tasksService.Tasklists.list();
+  let pageTokenListas = null;
+  do {
+    const responseListas = tasksService.Tasklists.list({
+      maxResults: 100,
+      pageToken: pageTokenListas
+    });
     if (responseListas.items && responseListas.items.length > 0) {
-      listas = responseListas.items;
+      listas = listas.concat(responseListas.items);
     }
-  } catch (e) {
-    Logger.log(`[INFO] Erro ao listar tasklists personalizadas (${e.message}). Usando padrão.`);
-    listas = [{ id: "@default", title: "Minhas tarefas" }];
-  }
+    pageTokenListas = responseListas.nextPageToken;
+  } while (pageTokenListas);
 
-  if (listas.length === 0) {
+  if (!listas || listas.length === 0) {
     listas.push({ id: "@default", title: "Minhas tarefas" });
   }
 
@@ -286,14 +287,14 @@ function localizarTarefaEmTodasAsListas(tasksService, keyword, specificListName)
 
   for (let l = 0; l < listas.length; l++) {
     const lista = listas[l];
-    let pageToken = null;
+    let pageTokenTarefas = null;
 
     do {
       const responseTasks = tasksService.Tasks.list(lista.id, {
         showCompleted: true,
         showHidden: true,
         maxResults: 100,
-        pageToken: pageToken
+        pageToken: pageTokenTarefas
       });
 
       if (responseTasks.items && responseTasks.items.length > 0) {
@@ -310,8 +311,8 @@ function localizarTarefaEmTodasAsListas(tasksService, keyword, specificListName)
         }
       }
 
-      pageToken = responseTasks.nextPageToken;
-    } while (pageToken);
+      pageTokenTarefas = responseTasks.nextPageToken;
+    } while (pageTokenTarefas);
   }
 
   return null;
@@ -337,10 +338,10 @@ function normalizarTexto(str) {
 
 /**
  * Ajusta manualmente o ponteiro do cronograma sequencial.
- * Exemplo: definirDiaManual(4) sincroniza com o Dia 4.
+ * Exemplo: definirDiaManual(9) sincroniza com o Dia 9.
  */
 function definirDiaManual(numero) {
-  const diaAlvo = numero ? numero.toString() : "4";
+  const diaAlvo = numero ? numero.toString() : "9";
   PropertiesService.getScriptProperties().setProperty(CONFIG_DEVOCIONAL.PROP_KEY_DIA_ATUAL, diaAlvo);
   Logger.log(`[SINCRONIZAÇÃO] Contador ajustado manualmente para o Dia ${diaAlvo}!`);
 }
@@ -349,6 +350,13 @@ function definirDiaManual(numero) {
  * Reseta o cronograma para o Dia 1.
  */
 function definirDiaInicial() {
-  PropertiesService.getScriptProperties().setProperty(CONFIG_DEVOCIONAL.PROP_KEY_DIA_ATUAL, "1");
-  Logger.log("[RESET] Contador sequencial reiniciado para o Dia 1.");
+  definirDiaManual(1);
+}
+
+/**
+ * Exibe no log o dia programado para a próxima execução.
+ */
+function exibirStatusAtual() {
+  const diaAtual = PropertiesService.getScriptProperties().getProperty(CONFIG_DEVOCIONAL.PROP_KEY_DIA_ATUAL) || "1";
+  Logger.log(`[STATUS DO CRONOGRAMA] Próximo Dia a ser executado: Dia ${diaAtual}`);
 }
